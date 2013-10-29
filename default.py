@@ -303,10 +303,10 @@ def main():
       }
 
       for k in info.keys():
-        if info[k]:
+        if info[k] is not None:
           info[k] = info[k].text
         else:
-          info[k] = ''
+          info[k] = '(not found)'
 
       url = f.find('enclosure').attrib['url']
       stream = Stream(url)
