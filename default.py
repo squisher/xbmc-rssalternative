@@ -225,41 +225,37 @@ def main():
   url = params.get('url')
   if url:
     url = urllib.url2pathname(url)
-  mode = params.get('mode')
 
   if url:
     # Play it.
     stream = Stream(url)
 
-    if not mode:
-      if stream.resumable():
-        modes = ['resume']
-        if stream.isFullyCached():
-          # if we are fully cached, then we can seek anywhere
-          modes.append('seek')
-        else:
-          # we can at least offer to restart if we can't seek
-          modes.append('restart')
+    if stream.resumable():
+      modes = ['resume']
+      if stream.isFullyCached():
+        # if we are fully cached, then we can seek anywhere
+        modes.append('seek')
       else:
-        modes = ['play']
-      modes.append('about')
+        # we can at least offer to restart if we can't seek
+        modes.append('restart')
+    else:
+      modes = ['play']
+    modes.append('about')
 
-      for mode in modes:
-        li = xbmcgui.ListItem(mode)
-        u = sys.argv[0] + '?' + urllib.urlencode({'url':url, 'mode':mode})
-        xbmcplugin.addDirectoryItem(handle = int(sys.argv[1]),
-                                    url = u, listitem = li,
-                                    isFolder = False)
-      xbmcplugin.endOfDirectory(int(sys.argv[1]))
+    dialog = xbmcgui.Dialog()
+    mode = dialog.select(stream.info['title'], modes)
+    print (_di_+"Selected " + str(mode))
+    del dialog
 
-    elif mode == 'about':
+    if mode != -1 and modes[mode] == 'about':
       dialog = xbmcgui.Dialog()
       dialog.ok(stream.info['title'], stream.info['description'], stream.info['duration'], stream.info['pubdate'])
-    else: # all other modes are handled here
+      del dialog
+    elif mode != -1: # all other modes are handled here
       print (_di_ + "Playing url %s" % url)
-      if mode == 'restart':
+      if modes[mode] == 'restart':
         stream.restart()
-      elif mode == 'seek':
+      elif modes[mode] == 'seek':
         dialog = xbmcgui.Dialog()
         hours = int(stream.info['playback_pos'] / 3600)
         minutes = int((stream.info['playback_pos'] % 3600) / 60)
@@ -268,6 +264,7 @@ def main():
           print (_di_+ "Manually seeking to " + seek_to)
           hours, minutes = seek_to.split(':')
           stream.info['playback_pos'] = (int(hours) * 3600) + (int(minutes) * 60)
+        del dialog
 
       player = StreamPlayer()
 
@@ -281,7 +278,7 @@ def main():
         stream.process()
         xbmc.sleep(1000)
 
-      print (_di_ + "Bye!")
+    print (_di_ + "Bye!")
 
 
   elif src:
