@@ -211,7 +211,7 @@ class StreamPlayer(xbmc.Player):
       t = self.getTime()
       self._stream.stop(t)
       print (_di_ + "Playback stopped, position = " + str(t))
-    except RuntimError, e:
+    except RuntimeError, e:
       print (_di_+"Can't update the playback position!")
       print (_di_+str(e))
       self._stream.stop()
