@@ -1,0 +1,6 @@
+Version 0.2.0
+* Many bugfixes
+* About dialog
+
+Version 0.1.0
+* Proof of concept
