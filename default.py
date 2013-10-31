@@ -237,15 +237,51 @@ class StreamPlayer(xbmc.Player):
     
 
 def main():
-  params = url_query_to_dict(sys.argv[2])
-  
-  src = params.get('src')
-  url = params.get('url')
-  if url:
-    url = urllib.url2pathname(url)
+  print (_di_+" ARGS " + ", ".join (sys.argv))
+  if sys.argv[0].startswith('plugin://' + _addon_id_):
+    # called from the GUI
+    params = url_query_to_dict(sys.argv[2])
 
-  if url:
+    src = params.get('src')
+    url = params.get('url')
+    if url:
+      url = urllib.url2pathname(url)
+    play = False
+  else:
+    # called from RunScript(...) below
+    url = sys.argv[1]
+    play = True
+
+
+  if url and play:
     # Play it.
+    stream = Stream(url)
+
+    player = StreamPlayer()
+
+    player._prepare(stream)
+    stream.start()
+
+    li = xbmcgui.ListItem(stream.info['title'])
+    li.setInfo('music', {'title':stream.info['title'],
+                         'duration': stream.getDurationSecs(),
+                         })
+    player.play(stream.cache_fn, li)
+
+    # wait for xbmc to catch up and start
+    while (player._resumed == False):
+      xbmc.sleep(200)
+
+    while (player.isPlayingAudio()):
+      # Keep script alive so that we can save the state when playing stops.
+      #print (_di_+"Still playing...")
+      stream.process()
+      xbmc.sleep(1000)
+
+    print (_di_ + "Bye!")
+
+  elif url:
+    print (_di_+"Asking what to do for " + url)
     stream = Stream(url)
 
     if stream.resumable():
@@ -283,28 +319,14 @@ def main():
           stream.info['playback_pos'] = time_str2secs(seek_to)
         del dialog
 
-      player = StreamPlayer()
+      # save infos in case we selected restart or seek
+      stream.stop()
 
-      player._prepare(stream)
-      stream.start()
+      u = "RunScript(" + _addon_id_ + ", " +  url + ")"
+      print (_di_+"Launching playing instance for " + u)
+      xbmc.executebuiltin(u)
 
-      li = xbmcgui.ListItem(stream.info['title'])
-      li.setInfo('music', {'title':stream.info['title'],
-                           'duration': stream.getDurationSecs(),
-                           })
-      player.play(stream.cache_fn, li)
-
-      # wait for xbmc to catch up and start
-      while (player._resumed == False):
-        xbmc.sleep(200)
-
-      while (player.isPlayingAudio()):
-        # Keep script alive so that we can save the state when playing stops.
-        #print (_di_+"Still playing...")
-        stream.process()
-        xbmc.sleep(1000)
-
-    print (_di_ + "Bye!")
+      print (_di_+"See you on the other side.")
 
 
   elif src:
