@@ -187,15 +187,17 @@ class Stream():
       self.instream.close()
       self.cache.close()
 
-  def stop(self, playback_pos=False):
-    if not playback_pos is False:
-      self.info['playback_pos'] = playback_pos
-    if self.started:
-      self.info['last_access'] = time.time()
-
+  def save(self):
     f = open(self.state_fn, 'w')
     f.write(cPickle.dumps(self.info))
     f.close()
+
+  def stop(self, playback_pos):
+    self.info['playback_pos'] = playback_pos
+    if self.started:
+      self.info['last_access'] = time.time()
+
+    self.save()
 
     if self.started and not self.fully_cached:
       self.instream.close()
@@ -232,7 +234,7 @@ class StreamPlayer(xbmc.Player):
     except RuntimeError, e:
       print (_di_+"Can't update the playback position!")
       print (_di_+str(e))
-      self._stream.stop()
+      self._stream.save()
     self._resumed = False
     
 
@@ -320,7 +322,7 @@ def main():
         del dialog
 
       # save infos in case we selected restart or seek
-      stream.stop()
+      stream.save()
 
       u = "RunScript(" + _addon_id_ + ", " +  url + ")"
       print (_di_+"Launching playing instance for " + u)
@@ -356,7 +358,7 @@ def main():
       url = f.find('enclosure').attrib['url']
       stream = Stream(url)
       stream.info.update(info)
-      stream.stop()
+      stream.save()
 
       li = xbmcgui.ListItem(info['title'])
 
