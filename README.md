@@ -10,4 +10,16 @@ said log on github:
 
 Loosely based on the plugin.audio.npr.
 
+
+Installation
+------------
+
+Rename the git directory to `plugin.audio.rssalternative',
+create a ZIP file and use XBMC's add-on `install from ZIP file'.
+
+
+If you want to keep up-to-date with the changes, it works fine to just run
+`git pull' in that directory.
+
+
 Copyright (c) David Mohr, 2013
