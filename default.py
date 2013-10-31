@@ -79,6 +79,21 @@ def url_query_to_dict(url):
 
   return param
 
+def time_str2secs(s):
+  hms = s.split(':')
+  if len(hms) == 1:
+    # assume seconds
+    return int(hms[0])
+  elif len(hms) == 2:
+    # assume hh:mm
+    return int(hms[0]) * 3600 + int(hms[1]) * 60
+  elif len(hms) == 3:
+    # assume hh:mm:ss
+    return int(hms[0]) * 3600 + int(hms[1]) * 60 + int(hms[2])
+  else:
+    # unknown
+    return 0
+
 
 class Stream():
   def __init__(self, url):
@@ -116,6 +131,9 @@ class Stream():
     self.cache.close()
 
     return pos == self.info['size']
+
+  def getDurationSecs(self):
+    return time_str2secs(self.info['duration'])
 
   def start(self):
     self.started = True
@@ -262,8 +280,7 @@ def main():
         seek_to = dialog.numeric(2, "Jump to", "%02d:%02d"%(hours ,minutes))
         if seek_to:
           print (_di_+ "Manually seeking to " + seek_to)
-          hours, minutes = seek_to.split(':')
-          stream.info['playback_pos'] = (int(hours) * 3600) + (int(minutes) * 60)
+          stream.info['playback_pos'] = time_str2secs(seek_to)
         del dialog
 
       player = StreamPlayer()
@@ -271,7 +288,16 @@ def main():
       player._prepare(stream)
       stream.start()
 
-      player.play(stream.cache_fn)
+      li = xbmcgui.ListItem(stream.info['title'])
+      li.setInfo('music', {'title':stream.info['title'],
+                           'duration': stream.getDurationSecs(),
+                           })
+      player.play(stream.cache_fn, li)
+
+      # wait for xbmc to catch up and start
+      while (player._resumed == False):
+        xbmc.sleep(200)
+
       while (player.isPlayingAudio()):
         # Keep script alive so that we can save the state when playing stops.
         #print (_di_+"Still playing...")
