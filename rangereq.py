@@ -1,6 +1,9 @@
 """Source: http://stackoverflow.com/questions/1971240/python-seek-on-remote-file"""
 import urllib2
 
+class RangeError(Exception):
+  pass
+
 class HTTPRangeHandler(urllib2.BaseHandler):
   """Handler that enables HTTP Range headers.
 
