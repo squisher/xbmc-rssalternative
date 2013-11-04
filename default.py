@@ -295,6 +295,13 @@ def main():
     print (_di_+"Asking what to do for " + url)
     stream = Stream(url)
 
+    modes_lang = {
+        'play'    : 30100,
+        'resume'  : 30101,
+        'restart' : 30102,
+        'seek'    : 30103,
+        'about'   : 30104,
+        }
     if stream.resumable():
       modes = ['resume']
       if stream.isFullyCached():
@@ -308,7 +315,7 @@ def main():
     modes.append('about')
 
     dialog = xbmcgui.Dialog()
-    mode = dialog.select(stream.info['title'], modes)
+    mode = dialog.select(stream.info['title'], [_lang_(modes_lang[m]) for m in modes])
     print (_di_+"Selected " + str(mode))
     del dialog
 

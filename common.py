@@ -21,7 +21,7 @@ import xbmc,xbmcaddon
 import os.path
 
 __all__ = ['_addon_id_', '_settings_', '_addonDir_', '_dataDir_', '_tempDir_', '_lastCached_',
-           '_di_']
+           '_di_', '_lang_']
 
 _addon_id_      = "plugin.audio.rssalternative"
 _settings_      = xbmcaddon.Addon(id=_addon_id_)
@@ -30,3 +30,4 @@ _dataDir_       = xbmc.translatePath("special://profile/addon_data/%s/" % _addon
 _tempDir_       = xbmc.translatePath("special://temp/%s/" % _addon_id_)
 _lastCached_    = os.path.join(_dataDir_,'last_cached')
 _di_            = "RSS-ALT "
+_lang_          = _settings_.getLocalizedString

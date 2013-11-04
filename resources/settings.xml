@@ -1,13 +1,13 @@
 <settings>
-  <setting id="name1" type="text" label="Name 1" default="alternativlos" />
-  <setting id="url1" type="text" label="URL 1" default="http://alternativlos.org/ogg.rss" />
-  <setting id="name2" type="text" label="Name 2" default="" />
-  <setting id="url2" type="text" label="URL 2" default="" />
-  <setting id="name3" type="text" label="Name 3" default="" />
-  <setting id="url3" type="text" label="URL 3" default="" />
+  <setting id="name1" type="text" label="30001" default="alternativlos" />
+  <setting id="url1" type="text"  label="30011" default="http://alternativlos.org/ogg.rss" />
+  <setting id="name2" type="text" label="30002" default="" />
+  <setting id="url2" type="text"  label="30012" default="" />
+  <setting id="name3" type="text" label="30003" default="" />
+  <setting id="url3" type="text"  label="30013" default="" />
 
   <setting type="sep"/>
 
-  <setting id="nCached" type="number" label="Number of Files to Cache" default="2" />
-  <setting label="Clear Cache" type="action" action="RunScript($CWD/scrub.py, clear_cache)"/>
+  <setting id="nCached" type="number" label="30020" default="2" />
+  <setting type="action" label="30021" action="RunScript($CWD/scrub.py, clear_cache)"/>
 </settings>
