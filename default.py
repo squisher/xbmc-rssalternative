@@ -135,28 +135,37 @@ class Stream():
   def getDurationSecs(self):
     return time_str2secs(self.info['duration'])
 
+  def openInstream(self, req):
+    self.instream = urllib2.urlopen(req)
+
+    length = int(self.instream.headers['Content-Length'])
+    if not length:
+      print (_di_+self.instream.headers)
+    self.info['size'] = length
+    print (_di_+"Updating file size: " + str(length))
+
   def start(self):
     self.started = True
     open_cache (self.cache_fn)
     self.cache = open(self.cache_fn, 'ab')
     pos = self.cache.tell()
 
+    req = urllib2.Request(self.url)
+
+    if not self.info['size'] or self.info['size'] == -1:
+      # size is unknown, update it
+      self.openInstream(req)
+      self.instream.close()
+
     if pos == self.info['size']:
       self.fully_cached = True
       print (_di_+"Caching already done.")
       return
 
-    req = urllib2.Request(self.url)
-
     if pos == 0:
       print (_di_+"Requesting whole file")
 
-      self.instream = urllib2.urlopen(req)
-
-      length = int(self.instream.headers['Content-Length'])
-      if not length:
-        print (_di_+self.instream.headers)
-      self.info['size'] = length
+      self.openInstream(req)
 
       print (_di_+"Initial request, total length is " + str(length))
 
