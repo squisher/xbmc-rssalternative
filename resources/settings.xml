@@ -10,4 +10,5 @@
 
   <setting id="nCached" type="number" label="30020" default="2" />
   <setting type="action" label="30021" action="RunScript($CWD/scrub.py, clear_cache)"/>
+  <setting type="action" label="30022" action="RunScript($CWD/scrub.py, clear_state)"/>
 </settings>

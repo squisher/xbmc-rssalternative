@@ -19,12 +19,22 @@
 
 from common import *
 import shutil
+import sys
 
-try:
-  print (_di_+"Scrubbing " + _dataDir_)
-  shutil.rmtree(_dataDir_)
-  print (_di_+"Scrubbing " + _tempDir_)
-  shutil.rmtree(_tempDir_)
-  print (_di_+"All clean!")
-except Exception, e:
-  print (_di_+"Error deleting temporary data: " + str(e))
+def clear(path):
+  print (_di_+"Scrubbing " + path)
+  try:
+    shutil.rmtree(path)
+  except Exception, e:
+    print (_di_+"Error deleting "+path+": " + str(e))
+
+if len(sys.argv) <= 1:
+  print(_di_+"Need an argument what to clean")
+  sys.exit(1)
+
+if sys.argv[1] == 'clear_state':
+  clear(_dataDir_)
+elif sys.argv[1] == 'clear_cache':
+  clear(_tempDir_)
+
+print (_di_+"Done cleaning!")
