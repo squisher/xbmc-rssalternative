@@ -1,3 +1,7 @@
+Version 0.3.0
+* Clean-up
+* Prepare for translations
+
 Version 0.2.0
 * Many bugfixes
 * About dialog
