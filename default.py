@@ -212,7 +212,8 @@ class Stream():
     f.close()
 
   def stop(self, playback_pos):
-    self.info['playback_pos'] = playback_pos
+    if playback_pos:
+      self.info['playback_pos'] = playback_pos
     if self.started:
       self.info['last_access'] = time.time()
 
@@ -255,7 +256,7 @@ class StreamPlayer(xbmc.Player):
       print (_di_+str(e))
       self._stream.save()
     self._resumed = False
-    
+
 
 def main():
   print (_di_+" ARGS " + ", ".join (sys.argv))
@@ -296,8 +297,17 @@ def main():
     while (player.isPlayingAudio()):
       # Keep script alive so that we can save the state when playing stops.
       #print (_di_+"Still playing...")
+      try:
+        last_playback_pos = player.getTime()
+      except:
+        last_playback_pos = False
+
       stream.process()
       xbmc.sleep(1000)
+
+    if stream.started:
+      print (_di_ + "Unclean shutdown detected, last position is " + str(last_playback_pos))
+      stream.stop(last_playback_pos)
 
     print (_di_ + "Bye!")
 
