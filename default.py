@@ -106,8 +106,13 @@ class Stream():
       f.close()
       print (_di_+"Loading existing stream... (playback_pos=" + str(self.info['playback_pos']) + ")")
     else:
-      self.info = {'url': self.url, 'playback_pos': 0.0, 'size': -1}
+      self.info = {}
       print (_di_+"Loading new stream...")
+
+    # Make sure all expected values are present.
+    for k,v in {'url': self.url, 'playback_pos': 0.0, 'size': -1, 'playcount': 0}.iteritems():
+      if k not in self.info:
+        self.info[k] = v
 
   def restart(self):
     self.info['playback_pos'] = 0.0
@@ -224,6 +229,10 @@ class Stream():
       self.cache.close()
     self.started = False
 
+  def ended(self):
+    self.info['playcount'] += 1
+    self.stop(0)
+
 
 class StreamPlayer(xbmc.Player):
   def __init__(self, *args):
@@ -235,7 +244,7 @@ class StreamPlayer(xbmc.Player):
 
   def onPlaybackEnded (self, *args):
     print (_di_ + "Playback ended, position = " + str(self.getTime()))
-    self._stream.stop(0)
+    self._stream.ended()
     super (xbmc.Player, self).onPlaybackEnded(*args)
 
   def onPlayBackStarted (self):
@@ -287,6 +296,7 @@ def main():
     li = xbmcgui.ListItem(stream.info['title'])
     li.setInfo('music', {'title':stream.info['title'],
                          'duration': stream.getDurationSecs(),
+                         'playcount': stream.info['playcount'],
                          })
     player.play(stream.cache_path, li)
 
