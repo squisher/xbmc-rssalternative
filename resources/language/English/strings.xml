@@ -16,4 +16,8 @@
   <string id="30102">restart</string>
   <string id="30103">seek</string>
   <string id="30104">about</string>
+
+  <!-- pop-ups -->
+  <string id="30200">Failed to delete cache item</string>
+  <string id="30201">Consider clearing the cache from the settings.</string>
 </strings>

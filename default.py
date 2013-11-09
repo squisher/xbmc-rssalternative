@@ -49,24 +49,13 @@ if not os.path.exists(_tempDir_):
 
 if os.path.exists(_lastCached_):
   fh = open(_lastCached_, 'rb')
-  last_cached = cPickle.load(fh)
+  # compatability: 0.2.0 used to store the full path, now it's only the basename
+  last_cached = [os.path.basename(s) for s in cPickle.load(fh)]
   fh.close()
 else:
   last_cached = []
 
 max_cached = int(_settings_.getSetting('nCached'))
-def open_cache(f):
-  global last_cached
-  if f not in last_cached:
-    if len(last_cached) > max_cached:
-      last = last_cached[0]
-      print(_di_+"Deleting cache " + last)
-      os.unlink(last)
-      last_cached = last_cached[1:]
-    last_cached.append(f)
-    fh = open(_lastCached_, 'wb')
-    cPickle.dump(last_cached, fh)
-    fh.close()
 
 def url_query_to_dict(url):
   ''' Returns the URL query args parsed into a dictionary '''
@@ -101,17 +90,18 @@ class Stream():
     self.started = False
     self.fully_cached = False
     self.chunk_len = 160*1024
-    self.state_fn = os.path.join(_dataDir_, sha1(url).hexdigest())
+    self.state_path = os.path.join(_dataDir_, sha1(url).hexdigest())
     _, ext = os.path.splitext(url)
     if not ext:
       ext = '.stream'
-    self.cache_fn = os.path.join(_tempDir_, sha1(url).hexdigest() + ext)
+    self.cache_fn   = sha1(url).hexdigest() + ext
+    self.cache_path = os.path.join(_tempDir_, self.cache_fn)
     print (_di_ + "url:   " + self.url)
-    print (_di_ + "state: " + self.state_fn)
-    print (_di_ + "cache: " + self.cache_fn)
+    print (_di_ + "state: " + self.state_path)
+    print (_di_ + "cache: " + self.cache_path)
 
-    if os.path.exists(self.state_fn):
-      f = open(self.state_fn)
+    if os.path.exists(self.state_path):
+      f = open(self.state_path)
       self.info = cPickle.loads(f.read())
       f.close()
       print (_di_+"Loading existing stream... (playback_pos=" + str(self.info['playback_pos']) + ")")
@@ -126,7 +116,7 @@ class Stream():
     return self.info['playback_pos'] > 0
 
   def isFullyCached(self):
-    self.cache = open(self.cache_fn, 'ab')
+    self.cache = open(self.cache_path, 'ab')
     pos = self.cache.tell()
     self.cache.close()
 
@@ -144,10 +134,30 @@ class Stream():
     self.info['size'] = length
     print (_di_+"Updating file size: " + str(length))
 
+  def open_cache(self):
+    global last_cached
+
+    if self.cache_fn not in last_cached:
+      last_cached.append(self.cache_fn)
+
+    while len(last_cached) > max_cached:
+      last = last_cached[0]
+      print(_di_+"Deleting cache " + last)
+      try:
+        os.unlink(os.path.join(_tempDir_, last))
+      except OSError, e:
+        print (_di_+"Failed to delete cache file: " + str(e))
+        xbmc.executebuiltin("Notification("+_lang_(30200)+", "+_lang_(30201)+", 7000)")
+      last_cached = last_cached[1:]
+
+      fh = open(_lastCached_, 'wb')
+      cPickle.dump(last_cached, fh)
+      fh.close()
+
   def start(self):
     self.started = True
-    open_cache (self.cache_fn)
-    self.cache = open(self.cache_fn, 'ab')
+    self.open_cache ()
+    self.cache = open(self.cache_path, 'ab')
     pos = self.cache.tell()
 
     req = urllib2.Request(self.url)
@@ -197,7 +207,7 @@ class Stream():
       self.cache.close()
 
   def save(self):
-    f = open(self.state_fn, 'w')
+    f = open(self.state_path, 'w')
     f.write(cPickle.dumps(self.info))
     f.close()
 
@@ -277,7 +287,7 @@ def main():
     li.setInfo('music', {'title':stream.info['title'],
                          'duration': stream.getDurationSecs(),
                          })
-    player.play(stream.cache_fn, li)
+    player.play(stream.cache_path, li)
 
     # wait for xbmc to catch up and start
     while (player._resumed == False):
