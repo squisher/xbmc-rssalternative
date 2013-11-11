@@ -301,10 +301,10 @@ def main():
     player.play(stream.cache_path, li)
 
     # wait for xbmc to catch up and start
-    while (player._resumed == False):
+    while player._resumed == False:
       xbmc.sleep(200)
 
-    while (player.isPlayingAudio()):
+    while player.isPlayingAudio() and not xbmc.abortRequested:
       # Keep script alive so that we can save the state when playing stops.
       #print (_di_+"Still playing...")
       try:
