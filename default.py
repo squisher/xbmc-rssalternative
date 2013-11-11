@@ -24,6 +24,7 @@ from xml.etree.ElementTree import ElementTree
 import cPickle
 from hashlib import sha1
 import time
+import threading
 
 import rangereq
 
@@ -100,6 +101,8 @@ class Stream():
     print (_di_ + "state: " + self.state_path)
     print (_di_ + "cache: " + self.cache_path)
 
+    self.mutex = threading.Semaphore()
+
     if os.path.exists(self.state_path):
       f = open(self.state_path)
       self.info = cPickle.loads(f.read())
@@ -160,6 +163,8 @@ class Stream():
       fh.close()
 
   def start(self):
+    self.mutex.acquire()
+
     self.started = True
     self.open_cache ()
     self.cache = open(self.cache_path, 'ab')
@@ -175,6 +180,7 @@ class Stream():
     if pos == self.info['size']:
       self.fully_cached = True
       print (_di_+"Caching already done.")
+      self.mutex.release()
       return
 
     if pos == 0:
@@ -197,9 +203,17 @@ class Stream():
     #print (_di_+"Caching " + str(len(data)) + " bytes")
     self.cache.write(data)
 
+    self.mutex.release()
+
   def process(self):
     if self.fully_cached:
       xbmc.sleep(1000)
+      return
+
+    self.mutex.acquire()
+
+    if self.started == False:
+      self.mutex.release()
       return
 
     data = self.instream.read(self.chunk_len)
@@ -210,6 +224,8 @@ class Stream():
       self.fully_cached = True
       self.instream.close()
       self.cache.close()
+
+    self.mutex.release()
 
   def save(self):
     f = open(self.state_path, 'w')
@@ -224,10 +240,14 @@ class Stream():
 
     self.save()
 
+    self.mutex.acquire()
+
     if self.started and not self.fully_cached:
       self.instream.close()
       self.cache.close()
     self.started = False
+
+    self.mutex.release()
 
   def ended(self):
     self.info['playcount'] += 1
