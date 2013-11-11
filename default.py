@@ -182,7 +182,7 @@ class Stream():
 
       self.openInstream(req)
 
-      print (_di_+"Initial request, total length is " + str(length))
+      print (_di_+"Initial request, total size is " + str(self.info['size']))
 
       data = self.instream.read(1024*1024)
 
