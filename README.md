@@ -14,12 +14,14 @@ Loosely based on the plugin.audio.npr.
 Installation
 ------------
 
-Rename the git directory to `plugin.audio.rssalternative',
-create a ZIP file and use XBMC's add-on `install from ZIP file'.
+Easiest method: Download from http://de.mcbf.net/~squisher/xbmc-rssalternative/
 
+Alternative:
+* Rename the git directory to 'plugin.audio.rssalternative', then create an
+  archive:
+  $ zip -r plugin.audio.rssalternative-0.3.0.zip plugin.audio.rssalternative
 
-If you want to keep up-to-date with the changes, it works fine to just run
-`git pull' in that directory.
+In both cases you have to use XBMC's add-on 'install from ZIP file'.
 
 
 Copyright (c) David Mohr, 2013
