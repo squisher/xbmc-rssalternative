@@ -113,9 +113,17 @@ class Stream():
       print (_di_+"Loading new stream...")
 
     # Make sure all expected values are present.
-    for k,v in {'url': self.url, 'playback_pos': 0.0, 'size': -1, 'playcount': 0}.iteritems():
+    defaults = {'url': self.url,
+                'playback_pos': 0.0,
+                'size': -1,
+                'playcount': 0,
+                'fetch_pos': None}
+    for k,v in defaults.iteritems():
       if k not in self.info:
         self.info[k] = v
+
+  def __str__(self):
+    return "playback_pos = " + str(self.info['playback_pos']) + ", fetch_pos = " + str(self.info['fetch_pos'])
 
   def restart(self):
     self.info['playback_pos'] = 0.0
@@ -124,11 +132,7 @@ class Stream():
     return self.info['playback_pos'] > 0
 
   def isFullyCached(self):
-    self.cache = open(self.cache_path, 'ab')
-    pos = self.cache.tell()
-    self.cache.close()
-
-    return pos == self.info['size']
+    return self.info['fetch_pos'] >= self.info['size']
 
   def getDurationSecs(self):
     return time_str2secs(self.info['duration'])
@@ -165,10 +169,18 @@ class Stream():
   def start(self):
     self.mutex.acquire()
 
+    try:
+      file_size = os.path.getsize(self.cache_path)
+    except os.error:
+      file_size = 0
+
     self.started = True
     self.open_cache ()
-    self.cache = open(self.cache_path, 'ab')
-    pos = self.cache.tell()
+    if os.path.exists(self.cache_path):
+      mode = 'r+b'
+    else:
+      mode = 'wb'
+    self.cache = open(self.cache_path, mode)
 
     req = urllib2.Request(self.url)
 
@@ -177,11 +189,33 @@ class Stream():
       self.openInstream(req)
       self.instream.close()
 
-    if pos == self.info['size']:
+    if file_size < self.info['size']:
+      # two cases:
+      # 1) a new file, file_size = 0
+      # 2) an old cache file, which is not sparse. In that case
+      #    there is no fetch_pos, but the file size tells us
+      #    the progress.
+      print (_di_+"New cache, or partial old cache, fetch_pos = file_size = " + str(file_size))
+      self.info['fetch_pos'] = file_size
+      # create sparse file
+      self.cache.seek(self.info['size']-1)
+      self.cache.write(bytes("\0"))
+    elif self.info['fetch_pos'] == None:
+      # old info dump, and completely cached:
+      # reuse the file size
+      print (_di_+"Old complete cache, fetch_pos = file_size = " + str(file_size))
+      self.info['fetch_pos'] = file_size
+
+    pos = self.info['fetch_pos']
+
+    if pos >= self.info['size']:
       self.fully_cached = True
       print (_di_+"Caching already done.")
       self.mutex.release()
       return
+
+    print (_di_+"Seeking to " + str(pos))
+    self.cache.seek(pos)
 
     if pos == 0:
       print (_di_+"Requesting whole file")
@@ -200,9 +234,11 @@ class Stream():
 
       data = self.instream.read(self.chunk_len)
 
-    #print (_di_+"Caching " + str(len(data)) + " bytes")
+    print (_di_+"Caching " + str(len(data)) + " bytes")
     self.cache.write(data)
+    self.info['fetch_pos'] += len(data)
 
+    print (_di_+"start() done.")
     self.mutex.release()
 
   def process(self):
@@ -219,6 +255,7 @@ class Stream():
     data = self.instream.read(self.chunk_len)
     #print (_di_+"Caching " + str(len(data)) + " bytes")
     self.cache.write(data)
+    self.info['fetch_pos'] += len(data)
     if data < self.chunk_len:
       print (_di_+"Caching is done!")
       self.fully_cached = True
@@ -279,7 +316,7 @@ class StreamPlayer(xbmc.Player):
     try:
       t = self.getTime()
       self._stream.stop(t)
-      print (_di_ + "Playback stopped, position = " + str(t))
+      print (_di_ + "Playback stopped, " + str(self._stream))
     except RuntimeError, e:
       print (_di_+"Can't update the playback position!")
       print (_di_+str(e))
@@ -315,9 +352,12 @@ def main():
 
     li = xbmcgui.ListItem(stream.info['title'])
     li.setInfo('music', {'title':stream.info['title'],
+                         'size': stream.info['size'],
                          'duration': stream.getDurationSecs(),
                          'playcount': stream.info['playcount'],
                          })
+
+    print (_di_+"Actually starting to play.")
     player.play(stream.cache_path, li)
 
     # wait for xbmc to catch up and start
