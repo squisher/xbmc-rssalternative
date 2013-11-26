@@ -96,7 +96,7 @@ def time_secs2str(tm):
 
 def urlopen(req, abort=True):
   try:
-    instream = urllib2.urlopen(req)
+    return urllib2.urlopen(req)
   except rangereq.RangeError, e:
     print(_di_+url+": "+str(e))
     xbmc.executebuiltin("Notification("+_lang_(30202)+", "+_lang_(30201)+", 7000)")
@@ -239,7 +239,7 @@ class Stream():
         data = self.instream.read(step_size)
         self.cache.write(data)
         read_size += len(data)
-        print (_di_+"Updating GUI to "+ int(read_size * 100.0 / initial_size)+ " after caching " + str(len(data)))
+        print (_di_+"Updating GUI to "+ str(int(read_size * 100.0 / initial_size))+ " after caching " + str(len(data)))
         win.update(int(read_size * 100.0 / initial_size))
         xbmc.sleep(10)
 
