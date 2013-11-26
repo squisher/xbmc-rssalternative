@@ -94,6 +94,20 @@ def time_secs2str(tm):
 
     return "{0:d}:{1:02d}:{2:02d}".format(h,m,s)
 
+def urlopen(req, abort=True):
+  try:
+    instream = urllib2.urlopen(req)
+  except rangereq.RangeError, e:
+    print(_di_+url+": "+str(e))
+    xbmc.executebuiltin("Notification("+_lang_(30202)+", "+_lang_(30201)+", 7000)")
+    if abort:
+      sys.exit(1)
+  except urllib2.URLError, e:
+    print(_di_+url+": "+str(e))
+    xbmc.executebuiltin("Notification("+_lang_(30203)+", "+url+"\n"+str(e)+", 7000)")
+    if abort:
+      sys.exit(1)
+
 
 class Stream():
   def __init__(self, url):
@@ -144,11 +158,7 @@ class Stream():
     return time_str2secs(self.info['duration'])
 
   def openInstream(self, req):
-    try:
-      self.instream = urllib2.urlopen(req)
-    except rangereq.RangeError, e:
-      xbmc.executebuiltin("Notification("+_lang_(30202)+", "+_lang_(30201)+", 7000)")
-      sys.exit(1)
+    self.instream = urlopen(req)
 
     length = int(self.instream.headers['Content-Length'])
     if not length:
@@ -243,11 +253,7 @@ class Stream():
       req.headers['Range'] = 'bytes=' + str(pos) + '-'
       print (_di_+"Requesting range " + req.headers['Range'])
 
-      try:
-        self.instream = urllib2.urlopen(req)
-      except rangereq.RangeError, e:
-        xbmc.executebuiltin("Notification("+_lang_(30202)+", "+_lang_(30201)+", 7000)")
-        sys.exit(1)
+      self.instream = urlopen(req)
 
       data = self.instream.read(self.chunk_len)
 
@@ -438,7 +444,7 @@ class RSS(object):
 
   def getItems(self):
     req = urllib2.Request(self.url)
-    self.instream = urllib2.urlopen(req)
+    self.instream = urlopen(req)
     feed_mod = self.instream.headers['Last-Modified']
     if feed_mod != self.info['last_mod']:
       self.info['last_mod'] = feed_mod
