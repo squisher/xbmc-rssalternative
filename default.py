@@ -85,6 +85,14 @@ def time_str2secs(s):
     print (_di_+"Unable to parse time string", s)
     return 0
 
+def time_secs2str(tm):
+    s = int(tm % 60)
+    tm /= 60
+    m = int(tm % 60)
+    h = int(tm / 60)
+
+    return "{0:d}:{1:02d}:{2:02d}".format(h,m,s)
+
 
 class Stream():
   def __init__(self, url):
@@ -341,6 +349,22 @@ class StreamPlayer(xbmc.Player):
     self._resumed = False
 
 
+def play_string(k, stream):
+    modes_lang = {
+        'play'    : 30100,
+        'resume'  : 30101,
+        'restart' : 30102,
+        'seek'    : 30103,
+        'about'   : 30104,
+        }
+    s = _lang_(modes_lang[k])
+    if k == 'play':
+        s += ' (' + stream.info['duration'] + ')'
+    elif k == 'resume':
+        s += ' (' + time_secs2str(stream.info['playback_pos']) + ' / ' + stream.info['duration'] + ')'
+    return s
+
+
 def main():
   print (_di_+" ARGS " + ", ".join (sys.argv))
   if sys.argv[0].startswith('plugin://' + _addon_id_):
@@ -397,13 +421,6 @@ def main():
     print (_di_+"Asking what to do for " + url)
     stream = Stream(url)
 
-    modes_lang = {
-        'play'    : 30100,
-        'resume'  : 30101,
-        'restart' : 30102,
-        'seek'    : 30103,
-        'about'   : 30104,
-        }
     if stream.resumable():
       modes = ['resume']
       if stream.isFullyCached():
@@ -417,7 +434,7 @@ def main():
     modes.append('about')
 
     dialog = xbmcgui.Dialog()
-    mode = dialog.select(stream.info['title'], [_lang_(modes_lang[m]) for m in modes])
+    mode = dialog.select(stream.info['title'], [play_string(m, stream) for m in modes])
     print (_di_+"Selected " + str(mode))
     del dialog
 
