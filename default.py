@@ -57,6 +57,7 @@ else:
   last_cached = []
 
 max_cached = int(_settings_.getSetting('nCached'))
+rewind_secs = int(_settings_.getSetting('rewindSecs'))
 
 def url_query_to_dict(url):
   ''' Returns the URL query args parsed into a dictionary '''
@@ -65,7 +66,7 @@ def url_query_to_dict(url):
     u = urlparse.urlparse(url)
     for q in u.query.split('&'):
       kvp = q.split('=')
-      param[kvp[0]] = kvp[1]
+      param[kvp[0]] = urllib.url2pathname(kvp[1])
 
   return param
 
@@ -75,14 +76,14 @@ def time_str2secs(s):
     # assume seconds
     return int(hms[0])
   elif len(hms) == 2:
-    # assume hh:mm
-    return int(hms[0]) * 3600 + int(hms[1]) * 60
+    # assume mm:ss
+    return int(hms[0]) * 60 + int(hms[1])
   elif len(hms) == 3:
     # assume hh:mm:ss
     return int(hms[0]) * 3600 + int(hms[1]) * 60 + int(hms[2])
   else:
     # unknown
-    print (_di_+"Unable to parse time string", s)
+    print (_di_+"Unable to parse time string "+ s)
     return 0
 
 def time_secs2str(tm):
@@ -228,7 +229,7 @@ class Stream():
         data = self.instream.read(step_size)
         self.cache.write(data)
         read_size += len(data)
-        print (_di_+"Updating GUI to", int(read_size * 100.0 / initial_size), "after caching " + str(len(data)))
+        print (_di_+"Updating GUI to "+ int(read_size * 100.0 / initial_size)+ " after caching " + str(len(data)))
         win.update(int(read_size * 100.0 / initial_size))
         xbmc.sleep(10)
 
@@ -463,8 +464,6 @@ def main():
 
     src = params.get('src')
     url = params.get('url')
-    if url:
-      url = urllib.url2pathname(url)
     play = False
   else:
     # called from RunScript(...) below
@@ -545,6 +544,9 @@ def main():
           print (_di_+ "Manually seeking to " + seek_to)
           stream.info['playback_pos'] = time_str2secs(seek_to)
         del dialog
+      elif modes[mode] == 'resume':
+        stream.info['playback_pos'] -= rewind_secs
+
 
       # save info in case we selected restart or seek
       stream.save()
@@ -582,7 +584,7 @@ def main():
     for k in sorted(sources.keys()):
       rss = RSS(sources[k])
 
-      u = sys.argv[0] + "?src=" + k
+      u = sys.argv[0] + '?' + urllib.urlencode({'src': k})
       li = xbmcgui.ListItem(k, thumbnailImage=rss.thumbnail())
       xbmcplugin.addDirectoryItem(handle = int(sys.argv[1]),
                                   url = u, listitem = li,

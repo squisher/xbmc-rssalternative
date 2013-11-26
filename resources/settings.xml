@@ -1,10 +1,14 @@
 <settings>
   <setting id="name1" type="text" label="30001" default="alternativlos" />
   <setting id="url1" type="text"  label="30011" default="http://alternativlos.org/ogg.rss" />
-  <setting id="name2" type="text" label="30002" default="" />
-  <setting id="url2" type="text"  label="30012" default="" />
+  <setting id="name2" type="text" label="30002" default="Democracy Now!" />
+  <setting id="url2" type="text"  label="30012" default="http://www.democracynow.org/podcast.xml" />
   <setting id="name3" type="text" label="30003" default="" />
   <setting id="url3" type="text"  label="30013" default="" />
+
+  <setting type="sep"/>
+
+  <setting id="rewindSecs" type="number" label="30030" default="0" />
 
   <setting type="sep"/>
 

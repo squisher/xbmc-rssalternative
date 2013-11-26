@@ -10,6 +10,7 @@
   <string id="30020">Number of Files to Cache</string>
   <string id="30021">Clear Cache</string>
   <string id="30022">Clear Playback State</string>
+  <string id="30030">Rewind on resume (seconds)</string>
 
   <!-- menu after selecting an item -->
   <string id="30100">play</string>

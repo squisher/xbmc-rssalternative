@@ -1,6 +1,8 @@
 Version 0.3.0
 * Clean-up
 * Prepare for translations
+* Cache feed, show image
+* Fixed random stops while still buffering
 
 Version 0.2.0
 * Many bugfixes
