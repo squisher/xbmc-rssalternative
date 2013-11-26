@@ -82,6 +82,7 @@ def time_str2secs(s):
     return int(hms[0]) * 3600 + int(hms[1]) * 60 + int(hms[2])
   else:
     # unknown
+    print (_di_+"Unable to parse time string", s)
     return 0
 
 
@@ -128,13 +129,17 @@ class Stream():
     pos = self.cache.tell()
     self.cache.close()
 
-    return pos == self.info['size']
+    return pos >= self.info['size']
 
   def getDurationSecs(self):
     return time_str2secs(self.info['duration'])
 
   def openInstream(self, req):
-    self.instream = urllib2.urlopen(req)
+    try:
+      self.instream = urllib2.urlopen(req)
+    except rangereq.RangeError, e:
+      xbmc.executebuiltin("Notification("+_lang_(30202)+", "+_lang_(30201)+", 7000)")
+      sys.exit(1)
 
     length = int(self.instream.headers['Content-Length'])
     if not length:
@@ -177,26 +182,63 @@ class Stream():
       self.openInstream(req)
       self.instream.close()
 
-    if pos == self.info['size']:
+    if pos >= self.info['size']:
+      if pos > self.info['size']:
+        print (_di_+"Warning:", self.cache_path, "is bigger than the expected size (is:", pos, ", should be: ", self.info['size'], ")")
+      else:
+        print (_di_+"Caching already done.")
+
       self.fully_cached = True
-      print (_di_+"Caching already done.")
       self.mutex.release()
       return
 
-    if pos == 0:
-      print (_di_+"Requesting whole file")
+    # initial_size needs to be bigger than xbmc's buffer, otherwise playback will be
+    # interrupted
+    initial_size = 3*1024*1024
+    if initial_size > self.info['size']:
+      initial_size = self.info['size']
+
+    if pos < initial_size:
+      if pos > 0:
+        req.headers['Range'] = 'bytes=' + str(pos) + '-'
+        print (_di_+"Requesting range " + req.headers['Range'])
+      else:
+        print (_di_+"Requesting whole file")
 
       self.openInstream(req)
 
-      print (_di_+"Initial request, total size is " + str(self.info['size']))
+      print (_di_+"Initial buffering")
 
-      data = self.instream.read(1024*1024)
+      step_size = initial_size / 20
+      read_size = 0
+
+      win = xbmcgui.DialogProgress()
+      ret = win.create('Caching', self.info['description'])
+      win.update(1)
+
+      while read_size < initial_size and not win.iscanceled():
+        data = self.instream.read(step_size)
+        self.cache.write(data)
+        read_size += len(data)
+        print (_di_+"Updating GUI to", int(read_size * 100.0 / initial_size), "after caching " + str(len(data)))
+        win.update(int(read_size * 100.0 / initial_size))
+        xbmc.sleep(10)
+
+      win.close()
+
+      if win.iscanceled():
+        print(_di_+"Cancelled, aborting.")
+        sys.exit(1)
 
     else:
       req.headers['Range'] = 'bytes=' + str(pos) + '-'
       print (_di_+"Requesting range " + req.headers['Range'])
 
-      self.instream = urllib2.urlopen(req)
+      try:
+        self.instream = urllib2.urlopen(req)
+      except rangereq.RangeError, e:
+        xbmc.executebuiltin("Notification("+_lang_(30202)+", "+_lang_(30201)+", 7000)")
+        sys.exit(1)
 
       data = self.instream.read(self.chunk_len)
 
@@ -252,6 +294,18 @@ class Stream():
   def ended(self):
     self.info['playcount'] += 1
     self.stop(0)
+
+  def shutdown(self, last_playback_pos):
+    """
+    Just a safety net, in case the OnPlayback{Stopped,Ended} method didn't get called.
+    """
+    self.mutex.acquire()
+
+    if self.started:
+      print (_di_ + "Unclean shutdown detected, last position is " + str(last_playback_pos))
+      self.stop(last_playback_pos)
+
+    self.mutex.release()
 
 
 class StreamPlayer(xbmc.Player):
@@ -333,11 +387,9 @@ def main():
         last_playback_pos = False
 
       stream.process()
-      xbmc.sleep(1000)
+      xbmc.sleep(100)
 
-    if stream.started:
-      print (_di_ + "Unclean shutdown detected, last position is " + str(last_playback_pos))
-      stream.stop(last_playback_pos)
+    stream.shutdown(last_playback_pos)
 
     print (_di_ + "Bye!")
 

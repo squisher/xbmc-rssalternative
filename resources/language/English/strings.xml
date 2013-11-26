@@ -21,4 +21,5 @@
   <!-- pop-ups -->
   <string id="30200">Failed to delete cache item</string>
   <string id="30201">Consider clearing the cache from the settings.</string>
+  <string id="30202">Failed to resume the download</string>
 </strings>
