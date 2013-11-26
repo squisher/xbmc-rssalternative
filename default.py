@@ -365,6 +365,96 @@ def play_string(k, stream):
     return s
 
 
+#def parse_time(tstr):
+#  """Parse strings in the `Last-Modified' format:
+#    Sat, 12 Oct 2013 18:19:41 GMT
+#  into a unix timestamp
+#  """
+#  import datetime
+#  fmt = '%a, %d %b %Y %H:%M:%S %Z'
+#  try:
+#    dt = datetime.datetime.strptime(tstr, fmt)
+#    return dt.strftime("%s")
+#  except TypeError:
+#    tm = time.strptime(tstr, fmt)
+#    return time.strftime("%s", tm)
+
+
+class RSS(object):
+  def __init__(self, url):
+    self.url = url
+    _, ext = os.path.splitext(url)
+    if not ext:
+      ext = '.rss'
+    self.cache_fn   = sha1(url).hexdigest() + ext
+    self.cache_path = os.path.join(_tempDir_, self.cache_fn)
+
+    self.load()
+
+  def load(self):
+    if os.path.exists(self.cache_path):
+      f = open(self.cache_path)
+      self.info = cPickle.loads(f.read())
+      f.close()
+    else:
+      self.info = {'last_mod': '', 'items': [], 'thumbnail': ''}
+
+  def save(self):
+    print(_di_+"Saving feed cache")
+    fh = open(self.cache_path, 'wb')
+    cPickle.dump(self.info, fh)
+    fh.close()
+
+  def parse(self, fh):
+    tree = ElementTree()
+    root = tree.parse(fh)
+
+    channel = root.find('./channel')
+    img = channel.find('./itunes:image', namespaces=dict(itunes='http://www.itunes.com/dtds/podcast-1.0.dtd'))
+
+    if img is not None and 'href' in img.attrib:
+      self.info['thumbnail'] = img.attrib['href']
+
+    entries = channel.findall('./item')
+
+    for i in range(len(entries)):
+      f = entries[i]
+      info = {
+        'title': f.find('title'),
+        'description': f.find('description'),
+        'pubdate': f.find('pubDate'),
+        'duration': f.find('itunes:duration', namespaces=dict(itunes='http://www.itunes.com/dtds/podcast-1.0.dtd')),
+      }
+
+      for k in info.keys():
+        if info[k] is not None:
+          info[k] = info[k].text
+        else:
+          info[k] = '(not found)'
+
+      info['url'] = f.find('enclosure').attrib['url']
+      self.info['items'].append(info)
+
+  def getItems(self):
+    req = urllib2.Request(self.url)
+    self.instream = urllib2.urlopen(req)
+    feed_mod = self.instream.headers['Last-Modified']
+    if feed_mod != self.info['last_mod']:
+      self.info['last_mod'] = feed_mod
+      print (_di_+"Fetching feed")
+      self.parse(self.instream)
+      self.save()
+    else:
+      print (_di_+"Using cache of feed from "+feed_mod)
+    self.instream.close()
+
+    return self.info['items']
+
+  def thumbnail(self):
+    return self.info['thumbnail']
+
+
+
 def main():
   print (_di_+" ARGS " + ", ".join (sys.argv))
   if sys.argv[0].startswith('plugin://' + _addon_id_):
@@ -456,7 +546,7 @@ def main():
           stream.info['playback_pos'] = time_str2secs(seek_to)
         del dialog
 
-      # save infos in case we selected restart or seek
+      # save info in case we selected restart or seek
       stream.save()
 
       u = "RunScript(" + _addon_id_ + ", " +  url + ")"
@@ -469,28 +559,11 @@ def main():
   elif src:
     print (_di_ + "Showing entries for " + src)
 
-    data = urllib.urlopen(sources[src])
-    tree = ElementTree()
-    root = tree.parse(data)
+    rss = RSS(sources[src])
 
-    entries = root.findall('./channel/item')
+    for info in rss.getItems():
+      url = info['url']
 
-    for i in range(len(entries)):
-      f = entries[i]
-      info = {
-        'title': f.find('title'),
-        'description': f.find('description'),
-        'pubdate': f.find('pubDate'),
-        'duration': f.find('itunes:duration', namespaces=dict(itunes='http://www.itunes.com/dtds/podcast-1.0.dtd')),
-      }
-
-      for k in info.keys():
-        if info[k] is not None:
-          info[k] = info[k].text
-        else:
-          info[k] = '(not found)'
-
-      url = f.find('enclosure').attrib['url']
       stream = Stream(url)
       stream.info.update(info)
       stream.save()
@@ -507,8 +580,10 @@ def main():
   else:
     print(_di_ + "No source selected.")
     for k in sorted(sources.keys()):
+      rss = RSS(sources[k])
+
       u = sys.argv[0] + "?src=" + k
-      li = xbmcgui.ListItem(k)
+      li = xbmcgui.ListItem(k, thumbnailImage=rss.thumbnail())
       xbmcplugin.addDirectoryItem(handle = int(sys.argv[1]),
                                   url = u, listitem = li,
                                   isFolder = True)
@@ -516,3 +591,4 @@ def main():
 
 
 main()
+# vim:tabstop=8 expandtab shiftwidth=2 softtabstop=2
