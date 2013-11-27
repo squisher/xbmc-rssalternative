@@ -147,13 +147,6 @@ class Stream():
   def resumable(self):
     return self.info['playback_pos'] > 0
 
-  def isFullyCached(self):
-    self.cache = open(self.cache_path, 'ab')
-    pos = self.cache.tell()
-    self.cache.close()
-
-    return pos >= self.info['size']
-
   def getDurationSecs(self):
     return time_str2secs(self.info['duration'])
 
@@ -214,6 +207,12 @@ class Stream():
     # initial_size needs to be bigger than xbmc's buffer, otherwise playback will be
     # interrupted
     initial_size = 3*1024*1024
+    resume_ratio = self.info['playback_pos'] / time_str2secs(self.info['duration'])
+    resume_size = int(initial_size + (resume_ratio * self.info['size']))
+
+    if resume_size > initial_size:
+      initial_size = resume_size
+
     if initial_size > self.info['size']:
       initial_size = self.info['size']
 
@@ -360,7 +359,6 @@ def play_string(k, stream):
     modes_lang = {
         'play'    : 30100,
         'resume'  : 30101,
-        'restart' : 30102,
         'seek'    : 30103,
         'about'   : 30104,
         }
@@ -518,14 +516,9 @@ def main():
 
     if stream.resumable():
       modes = ['resume']
-      if stream.isFullyCached():
-        # if we are fully cached, then we can seek anywhere
-        modes.append('seek')
-      else:
-        # we can at least offer to restart if we can't seek
-        modes.append('restart')
     else:
       modes = ['play']
+    modes.append('seek')
     modes.append('about')
 
     dialog = xbmcgui.Dialog()
@@ -547,8 +540,13 @@ def main():
         minutes = int((stream.info['playback_pos'] % 3600) / 60)
         seek_to = dialog.numeric(2, "Jump to", "%02d:%02d"%(hours ,minutes))
         if seek_to:
-          print (_di_+ "Manually seeking to " + seek_to)
-          stream.info['playback_pos'] = time_str2secs(seek_to)
+          seek_secs = time_str2secs(seek_to)
+          total_secs = time_str2secs(self.info['duration']):
+          if seek_secs <= total_seks
+            print (_di_+ "Manually seeking to " + seek_to)
+            stream.info['playback_pos'] = seek_secs
+          else:
+            print (_di_+"Trying to seek beyond the end of the (" + str(seek_secs) + " / " + str(total_secs))
         del dialog
       elif modes[mode] == 'resume':
         stream.info['playback_pos'] -= rewind_secs

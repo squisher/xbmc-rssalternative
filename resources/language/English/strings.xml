@@ -15,7 +15,7 @@
   <!-- menu after selecting an item -->
   <string id="30100">play</string>
   <string id="30101">resume</string>
-  <string id="30102">restart</string>
+  <!-- <string id="30102">restart</string> -->
   <string id="30103">seek</string>
   <string id="30104">about</string>
 
