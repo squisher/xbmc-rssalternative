@@ -207,59 +207,50 @@ class Stream():
     # initial_size needs to be bigger than xbmc's buffer, otherwise playback will be
     # interrupted
     initial_size = 3*1024*1024
+
+    # if we're resuming, ensure that the cache is big enough
     resume_ratio = self.info['playback_pos'] / time_str2secs(self.info['duration'])
     resume_size = int(initial_size + (resume_ratio * self.info['size']))
 
     if resume_size > initial_size:
       initial_size = resume_size
 
+    # adding in the initial_size could well make it bigger than the total file size
     if initial_size > self.info['size']:
       initial_size = self.info['size']
 
-    if pos < initial_size:
-      if pos > 0:
-        req.headers['Range'] = 'bytes=' + str(pos) + '-'
-        print (_di_+"Requesting range " + req.headers['Range'])
-      else:
-        print (_di_+"Requesting whole file")
-
-      self.openInstream(req)
-
-      print (_di_+"Initial buffering")
-
-      step_size = initial_size / 20
-      read_size = 0
-
-      win = xbmcgui.DialogProgress()
-      ret = win.create('Caching', self.info['description'])
-      win.update(1)
-
-      while read_size < initial_size and not win.iscanceled():
-        data = self.instream.read(step_size)
-        self.cache.write(data)
-        read_size += len(data)
-        print (_di_+"Updating GUI to "+ str(int(read_size * 100.0 / initial_size))+ " after caching " + str(len(data)))
-        win.update(int(read_size * 100.0 / initial_size))
-        xbmc.sleep(10)
-
-      win.close()
-
-      if win.iscanceled():
-        print(_di_+"Cancelled, aborting.")
-        sys.exit(1)
-
-    else:
+    if pos > 0:
       req.headers['Range'] = 'bytes=' + str(pos) + '-'
       print (_di_+"Requesting range " + req.headers['Range'])
+    else:
+      print (_di_+"Requesting whole file")
 
-      self.instream = urlopen(req)
+    self.openInstream(req)
 
-      data = self.instream.read(self.chunk_len)
+    print (_di_+"Buffering " + str(initial_size - pos))
 
-    #print (_di_+"Caching " + str(len(data)) + " bytes")
-    self.cache.write(data)
+    step_size = initial_size / 20
+    read_size = 0
+
+    win = xbmcgui.DialogProgress()
+    ret = win.create('Caching', self.info['description'])
+    win.update(1)
+
+    while read_size < initial_size and not win.iscanceled():
+      data = self.instream.read(step_size)
+      self.cache.write(data)
+      read_size += len(data)
+      print (_di_+"Updating GUI to "+ str(int(read_size * 100.0 / initial_size))+ " after caching " + str(len(data)))
+      win.update(int(read_size * 100.0 / initial_size))
+      xbmc.sleep(10)
+
+    win.close()
 
     self.mutex.release()
+
+    if win.iscanceled():
+      print(_di_+"Cancelled, aborting.")
+      sys.exit(1)
 
   def process(self):
     if self.fully_cached:
@@ -550,7 +541,6 @@ def main():
         del dialog
       elif modes[mode] == 'resume':
         stream.info['playback_pos'] -= rewind_secs
-
 
       # save info in case we selected restart or seek
       stream.save()
