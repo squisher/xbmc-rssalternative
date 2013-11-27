@@ -530,14 +530,17 @@ def main():
         hours = int(stream.info['playback_pos'] / 3600)
         minutes = int((stream.info['playback_pos'] % 3600) / 60)
         seek_to = dialog.numeric(2, "Jump to", "%02d:%02d"%(hours ,minutes))
-        if seek_to:
-          seek_secs = time_str2secs(seek_to)
-          total_secs = time_str2secs(self.info['duration']):
-          if seek_secs <= total_seks
-            print (_di_+ "Manually seeking to " + seek_to)
-            stream.info['playback_pos'] = seek_secs
-          else:
-            print (_di_+"Trying to seek beyond the end of the (" + str(seek_secs) + " / " + str(total_secs))
+
+        if not seek_to:
+          sys.exit(1)
+
+        seek_secs = time_str2secs(seek_to + ":00")
+        total_secs = time_str2secs(stream.info['duration'])
+        if seek_secs <= total_secs:
+          print (_di_+ "Manually seeking to " + seek_to)
+          stream.info['playback_pos'] = seek_secs
+        else:
+          print (_di_+"Trying to seek beyond the end of the (" + str(seek_secs) + " / " + str(total_secs))
         del dialog
       elif modes[mode] == 'resume':
         stream.info['playback_pos'] -= rewind_secs
